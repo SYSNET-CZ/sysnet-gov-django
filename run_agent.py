@@ -1231,6 +1231,17 @@ class AIAgent:
         # Store for reuse in switch_model (so config override persists across model switches)
         self._config_context_length = _config_context_length
 
+        # Read model.max_tokens from config.yaml if not set via constructor arg.
+        # Allows setting a global output token cap without changing code.
+        # Default 1500 tokens for Telegram/gateway sessions to limit runaway output costs.
+        if self.max_tokens is None and isinstance(_model_cfg, dict):
+            _cfg_max_tokens = _model_cfg.get("max_tokens")
+            if _cfg_max_tokens is not None:
+                try:
+                    self.max_tokens = int(_cfg_max_tokens)
+                except (TypeError, ValueError):
+                    pass
+
         # Check custom_providers per-model context_length
         if _config_context_length is None:
             _custom_providers = _agent_cfg.get("custom_providers")
