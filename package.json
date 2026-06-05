@@ -1,0 +1,50 @@
+{
+  "name": "@sysnet-cz/gov-ui",
+  "version": "0.1.0",
+  "description": "SYSNET Gov UI — Vue 3 component library for Czech public administration applications",
+  "author": "SYSNET s.r.o.",
+  "license": "MIT",
+  "type": "module",
+  "files": ["dist"],
+  "main": "./dist/sysnet-gov-ui.umd.cjs",
+  "module": "./dist/sysnet-gov-ui.js",
+  "exports": {
+    ".": {
+      "import": "./dist/sysnet-gov-ui.js",
+      "require": "./dist/sysnet-gov-ui.umd.cjs"
+    },
+    "./style.css": "./dist/style.css"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc && vite build",
+    "build:lib": "vue-tsc && vite build --config vite.lib.config.ts",
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "lint": "eslint . --ext .vue,.ts",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "@vueuse/core": "^10.9.0",
+    "lucide-vue-next": "^0.395.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.0.4",
+    "@vue/test-utils": "^2.4.5",
+    "@vue/tsconfig": "^0.5.1",
+    "typescript": "^5.4.0",
+    "vite": "^5.2.0",
+    "vitest": "^1.6.0",
+    "vue-tsc": "^2.0.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/vite": "^4.0.0",
+    "@storybook/vue3-vite": "^8.1.0",
+    "@storybook/blocks": "^8.1.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-vue": "^9.25.0"
+  }
+}

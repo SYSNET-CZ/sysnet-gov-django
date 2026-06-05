@@ -1,0 +1,24 @@
+@theme {
+  --color-gov-blue-primary: #00469b;
+  --color-gov-blue-dark: #0c1838;
+  --color-gov-blue-light: #9ec8e9;
+  --color-gov-blue-hover: #0e3e86;
+  
+  --color-gov-error: #d70c0f;
+  --color-gov-success: #2e7d32;
+  --color-gov-warning: #eaad08;
+  
+  --color-gov-bg-gray: #f2f6fc;
+  --color-gov-border: #d1d1d1;
+  --color-gov-text: #262626;
+
+  --font-roboto: "Roboto", sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-roboto);
+    color: var(--color-gov-text);
+    background-color: white;
+  }
+}
