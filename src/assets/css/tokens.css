@@ -16,9 +16,21 @@
 }
 
 @layer base {
+  :root {
+    --color-surface: white;
+    --color-on-surface: var(--color-gov-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-surface: #1a1a1a;
+      --color-on-surface: #f6f6f6;
+    }
+  }
+
   body {
     font-family: var(--font-roboto);
-    color: var(--color-gov-text);
-    background-color: white;
+    color: var(--color-on-surface);
+    background-color: var(--color-surface);
   }
 }
