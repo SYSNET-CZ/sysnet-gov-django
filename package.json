@@ -1,6 +1,6 @@
 {
   "name": "@sysnet-cz/gov-ui",
-  "version": "0.1.0",
+  "version": "0.1.0",\n  "publishConfig": {\n    "@sysnet-cz:registry": "https://npm.pkg.github.com"\n  },
   "description": "SYSNET Gov UI — Vue 3 component library for Czech public administration applications",
   "author": "SYSNET s.r.o.",
   "license": "MIT",
