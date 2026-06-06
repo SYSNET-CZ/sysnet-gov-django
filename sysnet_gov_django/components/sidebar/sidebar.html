@@ -1,0 +1,16 @@
+<aside class="gov-sidebar" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    <nav class="gov-sidebar__nav">
+        {% slot "content" %}
+            <ul class="gov-sidebar__list">
+                {% for item in menu_items %}
+                    <li class="gov-sidebar__item">
+                        <a href="{{ item.url }}" class="gov-sidebar__link {% if item.active %}gov-sidebar__link--active{% endif %}">
+                            {% if item.icon %}<i class="gov-icon gov-icon--{{ item.icon }}"></i>{% endif %}
+                            <span class="gov-sidebar__text">{{ item.label }}</span>
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endslot %}
+    </nav>
+</aside>

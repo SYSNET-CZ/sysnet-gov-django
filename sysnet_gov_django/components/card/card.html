@@ -1,0 +1,18 @@
+<div class="gov-card" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    {% if title %}
+    <div class="gov-card__header">
+        <h3 class="gov-card__title">{{ title }}</h3>
+        {% if_slot "header_actions" %}
+            <div class="gov-card__actions">{% slot "header_actions" %}{% endslot %}</div>
+        {% endif_slot %}
+    </div>
+    {% endif %}
+    <div class="gov-card__content">
+        {% slot "content" %}{% endslot %}
+    </div>
+    {% if_slot "footer" %}
+    <div class="gov-card__footer">
+        {% slot "footer" %}{% endslot %}
+    </div>
+    {% endif_slot %}
+</div>

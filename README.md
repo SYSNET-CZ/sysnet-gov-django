@@ -15,8 +15,18 @@ V `settings.py`:
 ```python
 INSTALLED_APPS = [
     ...,
+    "django_components",
     "sysnet_gov_django",
 ]
+
+# Pro django-components v settings.py
+COMPONENTS = {
+    "libraries": [
+        "sysnet_gov_django.components.button.button",
+        "sysnet_gov_django.components.card.card",
+        "sysnet_gov_django.components.form.layout",
+    ],
+}
 ```
 
 V šabloně:

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'gov_django/tokens.css' %}">
+    <link rel="stylesheet" href="{% static 'gov_django/components.css' %}">
+    {% slot "head" %}{% endslot %}
+</head>
+<body class="gov-body">
+    <header class="gov-header">
+        {% slot "header" %}
+            <div class="gov-container">
+                <span class="gov-brand">{{ page_title }}</span>
+            </div>
+        {% endslot %}
+    </header>
+
+    <main class="gov-main gov-container">
+        {% slot "content" %}{% endslot %}
+    </main>
+
+    <footer class="gov-footer">
+        <div class="gov-container">
+            {% slot "footer" %}&copy; {% now "Y" %} SYSNET s.r.o.{% endslot %}
+        </div>
+    </footer>
+
+    <script src="{% static 'gov_django/main.js' %}"></script>
+    {% slot "scripts" %}{% endslot %}
+</body>
+</html>

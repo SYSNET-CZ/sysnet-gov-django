@@ -1,0 +1,22 @@
+<div class="gov-form-field {% if errors %}gov-form-field--error{% endif %}" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    <label for="id_{{ name }}" class="gov-form-field__label">
+        {{ label }}
+        {% if required %}<span class="gov-form-field__required">*</span>{% endif %}
+    </label>
+    
+    <div class="gov-form-field__control">
+        {% slot "input" %}{% endslot %}
+    </div>
+
+    {% if help_text %}
+        <p class="gov-form-field__help">{{ help_text }}</p>
+    {% endif %}
+
+    {% if errors %}
+        <ul class="gov-form-field__errors">
+            {% for error in errors %}
+                <li class="gov-form-field__error-item">{{ error }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</div>

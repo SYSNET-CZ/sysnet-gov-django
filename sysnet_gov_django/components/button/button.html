@@ -1,0 +1,6 @@
+<button 
+    class="gov-button gov-button--{{ type }} gov-button--{{ size }}"
+    {% if disabled %}disabled{% endif %}
+    {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    {{ text }}
+</button>
