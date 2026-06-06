@@ -1,0 +1,10 @@
+/* Centrální CSS pro všechny Gov komponenty (GDS 4) */
+/* V budoucnu se sem přesunou styly ze všech .vue souborů */
+
+.gov-breadcrumbs { margin-bottom: var(--spacing-md); }
+.gov-modal { display: block; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; }
+.gov-modal__backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
+.gov-modal__dialog { position: relative; margin: 10% auto; padding: 0; width: 80%; max-width: 600px; z-index: 1001; }
+.gov-modal__content { background: var(--color-white); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); }
+
+/* Vzor pro synchronizaci s Django projektem */

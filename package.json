@@ -1,10 +1,17 @@
 {
   "name": "@sysnet-cz/gov-ui",
-  "version": "0.1.0",\n  "publishConfig": {\n    "@sysnet-cz:registry": "https://npm.pkg.github.com"\n  },
+  "version": "0.1.0",
+  "publishConfig": {
+    "@sysnet-cz:registry": "https://npm.pkg.github.com"
+  },
   "description": "SYSNET Gov UI — Vue 3 component library for Czech public administration applications",
   "author": "SYSNET s.r.o.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SYSNET-CZ/sysnet-gov-ui.git"
+  },
   "files": ["dist"],
   "main": "./dist/sysnet-gov-ui.umd.cjs",
   "module": "./dist/sysnet-gov-ui.js",
