@@ -1,0 +1,49 @@
+{% component "gov_layout" page_title=page_title %}
+    {% fill "header" %}
+        {% component "gov_navbar" brand_name=brand_name menu_items=menu_items user=user %}
+            {% fill "user_menu" %}
+                {% slot "user_menu" %}{% endslot %}
+            {% endfill %}
+        {% endcomponent %}
+    {% endfill %}
+
+    {% fill "content" %}
+        <div class="gov-layout-grid">
+            {% if sidebar_items or_slot "sidebar" %}
+            <aside class="gov-layout-grid__sidebar">
+                {% component "gov_sidebar" menu_items=sidebar_items %}
+                    {% fill "content" %}
+                        {% slot "sidebar" %}{% endslot %}
+                    {% endfill %}
+                {% endcomponent %}
+            </aside>
+            {% endif %}
+            
+            <section class="gov-layout-grid__main">
+                {% if_slot "breadcrumbs" %}
+                    <div class="gov-layout-grid__breadcrumbs">
+                        {% slot "breadcrumbs" %}{% endslot %}
+                    </div>
+                {% endif_slot %}
+                
+                <div class="gov-layout-grid__page-header">
+                    {% slot "page_header" %}
+                        <h1 class="gov-title">{{ page_title }}</h1>
+                    {% endslot %}
+                </div>
+
+                <div class="gov-layout-grid__body">
+                    {% slot "content" %}{% endslot %}
+                </div>
+            </section>
+        </div>
+    {% endfill %}
+
+    {% fill "footer" %}
+        {% component "gov_footer" %}
+            {% fill "footer_content" %}
+                {% slot "footer" %}{% endslot %}
+            {% endfill %}
+        {% endcomponent %}
+    {% endfill %}
+{% endcomponent %}

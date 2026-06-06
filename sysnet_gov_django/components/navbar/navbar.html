@@ -1,0 +1,32 @@
+<nav class="gov-navbar" role="navigation" aria-label="Hlavní navigace" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    <div class="gov-container gov-navbar__inner">
+        <div class="gov-navbar__brand">
+            <a href="/" class="gov-navbar__logo-link">
+                <span class="gov-navbar__brand-name">{{ brand_name }}</span>
+            </a>
+        </div>
+        
+        <div class="gov-navbar__menu">
+            <ul class="gov-navbar__list">
+                {% for item in menu_items %}
+                    <li class="gov-navbar__item">
+                        <a href="{{ item.url }}" class="gov-navbar__link {% if item.active %}gov-navbar__link--active{% endif %}">
+                            {{ item.label }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        {% if user %}
+        <div class="gov-navbar__user">
+            <div class="gov-user-profile">
+                <span class="gov-user-profile__name">{{ user.get_full_name|default:user.username }}</span>
+                {% slot "user_menu" %}
+                    <!-- Logout link, settings etc -->
+                {% endslot %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</nav>

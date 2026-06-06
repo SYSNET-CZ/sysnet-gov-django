@@ -1,0 +1,12 @@
+<footer class="gov-footer" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    <div class="gov-container gov-footer__inner">
+        <div class="gov-footer__content">
+            {% slot "footer_content" %}
+                <p>&copy; {% now "Y" %} SYSNET s.r.o. | Všechna práva vyhrazena.</p>
+            {% endslot %}
+        </div>
+        <div class="gov-footer__links">
+            {% slot "footer_links" %}{% endslot %}
+        </div>
+    </div>
+</footer>

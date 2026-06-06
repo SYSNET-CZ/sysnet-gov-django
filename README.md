@@ -30,6 +30,9 @@ COMPONENTS = {
         "sysnet_gov_django.components.table.table",
         "sysnet_gov_django.components.select.select",
         "sysnet_gov_django.components.breadcrumbs.breadcrumbs",
+        "sysnet_gov_django.components.navbar.navbar",
+        "sysnet_gov_django.components.footer.footer",
+        "sysnet_gov_django.components.form.master",
     ],
 }
 ```
