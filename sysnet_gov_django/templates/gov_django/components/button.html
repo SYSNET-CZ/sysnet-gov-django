@@ -1,0 +1,6 @@
+<button 
+    class="gov-button gov-button--{{ type }} gov-button--{{ size }} {{ extra_classes }}"
+    {% if id %}id="{{ id }}"{% endif %}
+    {% if disabled %}disabled{% endif %}>
+    {{ text }}
+</button>

@@ -1,22 +1,33 @@
-# Sysnet Gov Django Boilerplate
+# sysnet-gov-django
 
-Backendový boilerplate pro Gov.cz projekty postavený na Django 5.x.
-Vychází z komponent a tokenů definovaných v [sysnet-gov-ui](../sysnet-gov-ui/).
+Django UI knihovna založená na **Gov.cz Design Systému (v4)**. 
+Tato knihovna neimplementuje business logiku, ale poskytuje Django Template Tags a šablony pro rychlou tvorbu GDS compliant rozhraní přímo v Django šablonách (SSR).
 
-## Stack
-- **Framework:** Django 5.1
-- **Database:** PostgreSQL + PostGIS
-- **Auth:** JWT / Session (identity app)
-- **UI:** Gov.cz Design System (v4)
+Vychází z designových tokenů definovaných v [sysnet-gov-ui](../sysnet-gov-ui/).
 
-## Setup
-1. `uv venv .venv`
-2. `source .venv/bin/activate`
-3. `uv pip install -r pyproject.toml`
-4. `cp .env.template .env`
-5. `python manage.py migrate`
+## Instalace
+```bash
+pip install sysnet-gov-django
+```
 
-## Architecture
-- `apps/identity`: Správa uživatelů a oprávnění
-- `apps/audit`: Centrální auditní log
-- `apps/common`: Sdílené utility a base modely
+## Použití
+V `settings.py`:
+```python
+INSTALLED_APPS = [
+    ...,
+    "sysnet_gov_django",
+]
+```
+
+V šabloně:
+```html
+{% load gov_tags %}
+
+{% gov_alert text="Systém je v údržbě" type="warning" title="Pozor" %}
+{% gov_button text="Uložit data" type="primary" %}
+```
+
+## Obsah
+- `sysnet_gov_django/templatetags/` — Template tagy mapované na GDS komponenty.
+- `sysnet_gov_django/templates/gov_django/` — HTML šablony komponent.
+- `sysnet_gov_django/static/gov_django/` — CSS/JS (vygenerované ze sysnet-gov-ui).
