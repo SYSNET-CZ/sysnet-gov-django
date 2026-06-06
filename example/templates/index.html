@@ -1,0 +1,57 @@
+{% component "gov_master_layout" page_title="Styleguide | Gov Django" %}
+    
+    {% fill "breadcrumbs" %}
+        {% component "gov_breadcrumbs" items=breadcrumbs %}{% endcomponent %}
+    {% endfill %}
+
+    {% fill "sidebar" %}
+        {% component "gov_sidebar" menu_items=menu %}{% endcomponent %}
+    {% endfill %}
+
+    {% fill "content" %}
+        <section class="gov-section">
+            {% component "gov_card" title="Tlačítka a Akce" %}
+                {% fill "content" %}
+                    <div class="gov-button-group">
+                        {% component "gov_button" text="Primární" type="primary" %}{% endcomponent %}
+                        {% component "gov_button" text="Sekundární" type="secondary" %}{% endcomponent %}
+                        {% component "gov_button" text="S nebezpečím" type="danger" %}{% endcomponent %}
+                        {% component "gov_button" text="Zakázané" type="primary" disabled=True %}{% endcomponent %}
+                    </div>
+                {% endfill %}
+            {% endcomponent %}
+
+            {% component "gov_card" title="Formulářové prvky" %}
+                {% fill "content" %}
+                    {% component "gov_field" label="Textový vstup" name="test" help_text="Zadejte libovolný text" %}
+                        {% fill "input" %}
+                            <input type="text" name="test" id="id_test" class="gov-input" placeholder="Napište něco...">
+                        {% endfill %}
+                    {% endcomponent %}
+
+                    {% component "gov_select" label="Výběr" name="choice" options="[('1', 'Možnost A'), ('2', 'Možnost B')]" %}{% endcomponent %}
+                {% endfill %}
+            {% endcomponent %}
+
+            {% component "gov_card" title="Data a Tabulky" %}
+                {% fill "content" %}
+                    {% component "gov_data_table" headers=table_headers rows=table_rows %}{% endcomponent %}
+                {% endfill %}
+            {% endcomponent %}
+
+            <div class="gov-section__actions">
+                {% component "gov_button" text="Otevřít Modál" onclick="document.getElementById('demoModal').style.display='block'" %}{% endcomponent %}
+            </div>
+        </section>
+
+        {% component "gov_modal" id="demoModal" title="Ukázkový Modál" %}
+            {% fill "content" %}
+                <p>Toto je ukázka modálního okna v GDS stylu.</p>
+            {% endfill %}
+            {% fill "footer" %}
+                {% component "gov_button" text="Rozumím" onclick="document.getElementById('demoModal').style.display='none'" %}{% endcomponent %}
+            {% endfill %}
+        {% endcomponent %}
+    {% endfill %}
+
+{% endcomponent %}
