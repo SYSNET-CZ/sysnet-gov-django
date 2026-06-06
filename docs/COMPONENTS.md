@@ -38,6 +38,17 @@ Obal formulářového prvku s labelem, help textem a validací.
 Strukturovaný box.
 **Sloty:** `header_actions`, `content`, `footer`.
 
+### 5. GovModal (`{% component "gov_modal" %}`)
+GDS modální okno s podporou asynchronního načítání obsahu.
+```html
+{% component "gov_modal" id="myModal" title="Detail záznamu" %}
+    {% fill "content" %}
+        Obsah okna...
+    {% endfill %}
+{% endcomponent %}
+```
+Pro dynamické načítání použijte parametr `hx_url`.
+
 ## Integrace s Django Forms
 Použijte `GovFormMixin` ve svých třídách formulářů:
 ```python

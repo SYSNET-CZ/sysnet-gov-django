@@ -33,6 +33,7 @@ COMPONENTS = {
         "sysnet_gov_django.components.navbar.navbar",
         "sysnet_gov_django.components.footer.footer",
         "sysnet_gov_django.components.form.master",
+        "sysnet_gov_django.components.modal.modal",
     ],
 }
 ```

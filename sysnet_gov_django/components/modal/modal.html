@@ -1,0 +1,29 @@
+<div id="{{ id }}" class="gov-modal gov-modal--{{ size }}" tabindex="-1" role="dialog" aria-labelledby="{{ id }}-title" aria-modal="true" 
+     {% if hx_url %}hx-get="{{ hx_url }}" hx-trigger="intersect once"{% endif %}
+     {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    
+    <div class="gov-modal__dialog">
+        <div class="gov-modal__content">
+            <div class="gov-modal__header">
+                <h5 class="gov-modal__title" id="{{ id }}-title">{{ title }}</h5>
+                <button type="button" class="gov-modal__close" onclick="document.getElementById('{{ id }}').style.display='none'" aria-label="Zavřít">
+                    &times;
+                </button>
+            </div>
+            
+            <div class="gov-modal__body">
+                {% slot "content" %}
+                    <!-- Načteno přes HTMX nebo staticky -->
+                {% endslot %}
+            </div>
+
+            {% if_slot "footer" %}
+            <div class="gov-modal__footer">
+                {% slot "footer" %}{% endslot %}
+            </div>
+            {% endif_slot %}
+        </div>
+    </div>
+    
+    <div class="gov-modal__backdrop" onclick="document.getElementById('{{ id }}').style.display='none'"></div>
+</div>
