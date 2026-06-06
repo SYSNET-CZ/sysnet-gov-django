@@ -1,0 +1,13 @@
+<nav class="gov-breadcrumbs" aria-label="Drobečková navigace" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+    <ol class="gov-breadcrumbs__list">
+        {% for item in items %}
+            <li class="gov-breadcrumbs__item">
+                {% if forloop.last %}
+                    <span class="gov-breadcrumbs__link gov-breadcrumbs__link--current" aria-current="page">{{ item.label }}</span>
+                {% else %}
+                    <a href="{{ item.url }}" class="gov-breadcrumbs__link">{{ item.label }}</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+    </ol>
+</nav>

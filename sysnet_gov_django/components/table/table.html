@@ -1,0 +1,24 @@
+<div class="gov-table-container" {% if hx_target %}hx-target="{{ hx_target }}"{% endif %} {% if hx_url %}hx-get="{{ hx_url }}" hx-trigger="load delay:100ms" {% endif %}>
+    <table class="gov-table" {% for key, value in attrs.items %}{{ key }}="{{ value }}" {% endfor %}>
+        <thead class="gov-table__head">
+            <tr class="gov-table__row">
+                {% for header in headers %}
+                    <th class="gov-table__cell gov-table__cell--header">{{ header }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody class="gov-table__body">
+            {% for row in rows %}
+                <tr class="gov-table__row">
+                    {% for cell in row %}
+                        <td class="gov-table__cell">{{ cell }}</td>
+                    {% endfor %}
+                </tr>
+            {% empty %}
+                <tr class="gov-table__row">
+                    <td class="gov-table__cell" colspan="{{ headers|length }}">Žádná data k dispozici.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

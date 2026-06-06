@@ -1,0 +1,36 @@
+@theme {
+  --color-gov-blue-primary: #00469b;
+  --color-gov-blue-dark: #0c1838;
+  --color-gov-blue-light: #9ec8e9;
+  --color-gov-blue-hover: #0e3e86;
+  
+  --color-gov-error: #d70c0f;
+  --color-gov-success: #2e7d32;
+  --color-gov-warning: #eaad08;
+  
+  --color-gov-bg-gray: #f2f6fc;
+  --color-gov-border: #d1d1d1;
+  --color-gov-text: #262626;
+
+  --font-roboto: "Roboto", sans-serif;
+}
+
+@layer base {
+  :root {
+    --color-surface: white;
+    --color-on-surface: var(--color-gov-text);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --color-surface: #1a1a1a;
+      --color-on-surface: #f6f6f6;
+    }
+  }
+
+  body {
+    font-family: var(--font-roboto);
+    color: var(--color-on-surface);
+    background-color: var(--color-surface);
+  }
+}

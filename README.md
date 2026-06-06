@@ -25,6 +25,11 @@ COMPONENTS = {
         "sysnet_gov_django.components.button.button",
         "sysnet_gov_django.components.card.card",
         "sysnet_gov_django.components.form.layout",
+        "sysnet_gov_django.components.sidebar.sidebar",
+        "sysnet_gov_django.components.field.field",
+        "sysnet_gov_django.components.table.table",
+        "sysnet_gov_django.components.select.select",
+        "sysnet_gov_django.components.breadcrumbs.breadcrumbs",
     ],
 }
 ```
