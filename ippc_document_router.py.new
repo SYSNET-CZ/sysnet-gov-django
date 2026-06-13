@@ -1,0 +1,40 @@
+$(cat ippc_document_router.py.tmp)
+
+@router.patch(
+    path='/document/{identifier}/authorize',
+    response_model=DocumentType,
+    summary='Autorizuje dokument IPPC (včetně workflow kroků)',
+    description='Provede autorizaci dokumentu a související změny v kontejneru a zařízení.',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def patch_document_authorize(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu',
+                 description='Lze použít UUID, čj. nebo PID')],
+        doit: Annotated[bool, Query(title='Autorizovat/Zrušit autorizaci')] = True,
+        responsible_title: Annotated[Optional[str], Query(title='Titul/Jméno odpovědné osoby')] = None,
+        api_key: APIKey = Depends(header_scheme),
+        identity: Optional[AuthenticatedUser] = Depends(get_request_identity)
+):
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is None:
+        raise ApiError(code=404, message=f"Document '{identifier}' not found")
+
+    responsible = None
+    if responsible_title:
+        from sysnet_pyutils.models.general import PersonBaseType
+        responsible = PersonBaseType(title=responsible_title)
+    elif identity:
+        from sysnet_pyutils.models.general import PersonBaseType
+        responsible = PersonBaseType(title=identity.username if identity.username else identity.sub)
+
+    reply1 = await reply.authorize(doit=doit, responsible=responsible)
+    if reply1 is None:
+         raise ApiError(code=500, message='Authorization failed')
+         
+    return reply1.document

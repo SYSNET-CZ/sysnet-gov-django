@@ -1,0 +1,1 @@
+{"issue": {"project_id": 183, "subject": "Integrace auth-lib a RBAC pro SEVESO", "description": "Nahrazen\u00ed sandboxov\u00e9ho mocku re\u00e1lnou knihovnou auth-lib.\n- Implementace Keycloak JWT validace\n- Nastaven\u00ed rol\u00ed: seveso_editor, seveso_viewer\n- Vynucen\u00ed opr\u00e1vn\u011bn\u00ed na FastAPI routech", "status_id": 2, "priority_id": 2}}

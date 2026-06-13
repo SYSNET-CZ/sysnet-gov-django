@@ -1,0 +1,61 @@
+Metadata-Version: 2.4
+Name: sysnet-auth
+Version: 0.2.8
+Summary: Sdilena autentizacni knihovna pro FastAPI mikrosluzby s Keycloack (OIDC/JWT).
+Author: SYSNET s.r.o.
+License: GNU Affero General Public License v3
+Project-URL: Homepage, https://sysnet.cz
+Project-URL: Repository, https://github.com/SYSNET-CZ/auth-lib
+Project-URL: Documentation, https://github.com/SYSNET-CZ/auth-lib#readme
+Project-URL: Bug Tracker, https://github.com/SYSNET-CZ/auth-lib/issues
+Keywords: fastapi,keycloak,jwt,oidc,auth,sysnet
+Classifier: Framework :: FastAPI
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Classifier: Programming Language :: Python :: 3.14
+Classifier: Topic :: Internet :: WWW/HTTP :: HTTP Servers
+Classifier: Topic :: Security
+Classifier: Typing :: Typed
+Classifier: License :: OSI Approved :: GNU Affero General Public License v3
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: fastapi<1,>=0.115
+Requires-Dist: pydantic<3,>=2.9
+Requires-Dist: pydantic-settings<3,>=2.3
+Requires-Dist: pyjwt[crypto]<3,>=2.9
+Requires-Dist: httpx<1,>=0.27
+Requires-Dist: sysnet-pyutils>=0.1
+Provides-Extra: dev
+Requires-Dist: pytest<10,>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio<1,>=0.23; extra == "dev"
+Requires-Dist: pytest-cov<8,>=5.0; extra == "dev"
+Requires-Dist: cryptography<48,>=42.0; extra == "dev"
+Requires-Dist: mypy<2,>=1.11; extra == "dev"
+Requires-Dist: ruff<1,>=0.6; extra == "dev"
+Dynamic: license-file
+
+# sysnet-auth
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-181717?style=flat&logo=github)](https://github.com/SYSNET-CZ/auth-lib)
+![PyPI - Version](https://img.shields.io/pypi/v/sysnet-auth)
+![Python Version](https://img.shields.io/pypi/pyversions/sysnet-auth)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?style=flat&logo=fastapi)
+![License](https://img.shields.io/badge/license-Proprietary-red.svg)
+![Tests](https://img.shields.io/badge/tests-passed-brightgreen.svg)
+
+Sdilena autentizacni knihovna pro FastAPI mikrosluzby s Keycloak (OIDC/JWT).
+
+## Installation
+
+```bash
+pip install sysnet-auth
+```
+
+## Features
+
+- JWT validation using Keycloak public keys
+- Async JWKS caching with stale-if-error support
+- Automated authentication dependency for FastAPI
+- Permission-based access control (scopes/roles)
