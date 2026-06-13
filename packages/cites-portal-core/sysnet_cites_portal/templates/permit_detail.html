@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav style="margin-bottom: 1rem; color: #666;">
+    <a href="/" style="color: var(--ecl-color-primary);">Home</a> &raquo; Permit Detail
+</nav>
+
+<div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <h2>Permit: {{ permit.permit_number }}</h2>
+    <span style="padding: 0.25rem 0.5rem; background: #e1f5fe; color: #01579b; border-radius: 2px; font-weight: bold;">
+        {{ permit.status.upper() }}
+    </span>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem;">
+    <!-- Parties -->
+    <div style="background: white; padding: 1.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: var(--ecl-color-primary);">Parties</h3>
+        <p><strong>Exporter:</strong> {{ permit.exporter.name }} ({{ permit.exporter.country_code }})</p>
+        <p><strong>Importer:</strong> {{ permit.importer.name }} ({{ permit.importer.country_code }})</p>
+    </div>
+    
+    <!-- Dates -->
+    <div style="background: white; padding: 1.5rem; border: 1px solid #ddd; border-radius: 4px;">
+        <h3 style="margin-top: 0; color: var(--ecl-color-primary);">Validity</h3>
+        <p><strong>Issued:</strong> {{ permit.issue_date.strftime('%Y-%m-%d') }}</p>
+        {% if permit.expiry_date %}
+        <p><strong>Expires:</strong> {{ permit.expiry_date.strftime('%Y-%m-%d') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Items -->
+<div style="margin-top: 2rem;">
+    <h3 style="color: var(--ecl-color-primary);">Specimens / Items</h3>
+    <table style="width: 100%; border-collapse: collapse; background: white; border: 1px solid #ddd;">
+        <thead style="background: #f3f6f9;">
+            <tr>
+                <th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #ddd;">Taxon</th>
+                <th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #ddd;">Quantity</th>
+                <th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #ddd;">Cleared</th>
+                <th style="padding: 0.75rem; text-align: center; border-bottom: 2px solid #ddd;">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in permit.items %}
+            <tr>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #eee;">
+                    <em>{{ item.taxon_id }}</em><br>
+                    <small style="color: #666;">Appendix {{ item.appendix }}</small>
+                </td>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #eee; text-align: right;">{{ item.quantity }} {{ item.unit }}</td>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #eee; text-align: right;">{{ item.deducted_quantity }}</td>
+                <td style="padding: 0.75rem; border-bottom: 1px solid #eee; text-align: center;">
+                    {% if item.is_exhausted %}
+                    <span style="color: #d32f2f;">EXHAUSTED</span>
+                    {% else %}
+                    <span style="color: #388e3c;">AVAILABLE</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Movements / History -->
+<div style="margin-top: 2rem;">
+    <h3 style="color: var(--ecl-color-primary);">Movement History (PostGIS Tracking)</h3>
+    
+    {% if movements %}
+    <div id="map" style="height: 400px; width: 100%; margin-bottom: 2rem; border: 1px solid #ddd; border-radius: 4px;"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var map = L.map('map').setView([50.0, 14.5], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+
+            var bounds = [];
+            {% for move in movements %}
+                // Only plot if coordinates are available (placeholder logic used in repo for now)
+                {% if move.latitude != 0.0 %}
+                    var marker = L.marker([{{ move.latitude }}, {{ move.longitude }}])
+                        .addTo(map)
+                        .bindPopup('<b>{{ move.event_type }}</b><br>{{ move.timestamp.strftime(\"%Y-%m-%d %H:%M\") }}');
+                    bounds.push([{{ move.latitude }}, {{ move.longitude }}]);
+                {% endif %}
+            {% endfor %}
+            
+            if (bounds.length > 0) {
+                map.fitBounds(bounds);
+            }
+        });
+    </script>
+    
+    <ul style="list-style: none; padding: 0;">
+        {% for move in movements %}
+        <li style="padding: 1rem; border-left: 4px solid var(--ecl-color-secondary); background: white; margin-bottom: 0.5rem; border-radius: 0 4px 4px 0;">
+            <div style="display: flex; justify-content: space-between;">
+                <strong>{{ move.event_type }}</strong>
+                <small>{{ move.timestamp.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            <div style="margin-top: 0.5rem; color: #444;">{{ move.address or 'Location coordinates logged' }}</div>
+            {% if move.remarks %}<div style="font-style: italic; color: #666; font-size: 0.9rem;">&quot;{{ move.remarks }}&quot;</div>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p style="color: #666; font-style: italic;">No movement history recorded for this permit.</p>
+    {% endif %}
+</div>
+
+<div style="margin-top: 2rem; border-top: 1px solid #ddd; padding-top: 2rem;">
+    <a href="/" style="display: inline-block; padding: 0.5rem 1rem; border: 1px solid var(--ecl-color-primary); color: var(--ecl-color-primary); text-decoration: none; border-radius: 4px;">Back to Registry</a>
+</div>
+{% endblock %}

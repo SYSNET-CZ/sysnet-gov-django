@@ -1,0 +1,24 @@
+{% extends "permit_detail.html" %}
+
+{% block content %}
+<!-- SYSNET-GOV-UI Banner for CZ National context -->
+<div style="background: #f0f4f7; border-left: 5px solid #005a96; padding: 1rem; margin-bottom: 2rem;">
+    <h3 style="margin-top: 0; color: #005a96;">Česká národní specifikace</h3>
+    <p>Toto povolení podléhá registrační povinnosti podle <strong>{{ legislation }}</strong>.</p>
+    
+    {% if is_registered %}
+        <div style="color: #1b5e20; font-weight: bold;">
+            [✓] REGISTROVÁNO (Číslo: {{ permit.extension_data.cz_registration_number }})
+        </div>
+    {% else %}
+        <div style="color: #b71c1c; font-weight: bold;">
+            [!] VYŽADUJE REGISTRACI
+        </div>
+        <p><small>Držitel je povinen exemplář zaregistrovat do 30 dnů od nabytí.</small></p>
+    {% endif %}
+</div>
+
+<!-- Continue with core layout -->
+{{ super() }}
+
+{% endblock %}

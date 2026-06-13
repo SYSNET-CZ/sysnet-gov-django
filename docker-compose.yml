@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  # 1. Database Layer: PostGIS + TimescaleDB (Dual purpose)
+  db:
+    image: timescale/timescaledb-postgis:latest-pg14
+    container_name: citesx-db
+    environment:
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_DB=citesx
+    volumes:
+      - citesx_db_data:/var/lib/postgresql/data
+    networks:
+      - citesx_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U docker -d citesx"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Identity & Access Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: citesx-auth
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/citesx
+      - KC_DB_USERNAME=docker
+      - KC_DB_PASSWORD=docker
+    command: start-dev
+    depends_on:
+      - db
+    networks:
+      - citesx_net
+
+  # 3. Core Engine Service (Internal API)
+  core-engine:
+    image: sysnetcz/cites-core-engine:latest
+    container_name: citesx-core
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://docker:docker@db:5432/citesx
+      - KEYCLOAK_URL=http://keycloak:8080
+      - REALM=hermes-test
+    depends_on:
+      - db
+    networks:
+      - citesx_net
+
+  # 4. National Portal CZ (sysnet-gov-ui / GDS 4)
+  portal-cz:
+    image: sysnetcz/cites-portal-cz:latest
+    container_name: citesx-portal-cz
+    environment:
+      - CORE_API_URL=http://core-engine:8000
+      - DATABASE_URL=postgresql+asyncpg://docker:docker@db:5432/citesx
+    ports:
+      - "8081:8000"
+    depends_on:
+      - core-engine
+    networks:
+      - citesx_net
+
+  # 5. EPIX Gateway (Mezinárodní výměna XML)
+  epix-gateway:
+    image: sysnetcz/cites-epix-gateway:latest
+    container_name: citesx-epix
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://docker:docker@db:5432/citesx
+      - CITES_SYS_CERT=/run/secrets/cites_cert
+      - CITES_SYS_KEY=/run/secrets/cites_key
+      - CITES_TSA_URL=http://timestamp.digicert.com
+    ports:
+      - "8443:8000"
+    secrets:
+      - cites_cert
+      - cites_key
+    depends_on:
+      - core-engine
+    networks:
+      - citesx_net
+
+networks:
+  citesx_net:
+    driver: bridge
+
+volumes:
+  citesx_db_data:
+
+secrets:
+  cites_cert:
+    file: ./secrets/cert.pem
+  cites_key:
+    file: ./secrets/key.pem
