@@ -1,0 +1,559 @@
+Agent pid 3853233
+from auth_lib import AuthenticatedUser
+import logging
+from logging import Logger
+from typing import Optional,  Annotated, Union
+from uuid import UUID
+
+from fastapi import APIRouter, Path, Header, Query, Body, Depends, Security
+from fastapi.openapi.models import APIKey
+from ippc_model.ippc_common import IppcDocCodeEnum, DOC_CREATES_CONTAINER, DOC_DOCUMENTATION, EquipmentStatusEnum
+from ippc_model.ippc_document import DocumentType, DocumentListType, DocumentTypeBase
+from sysnet_pyutils.models.general import ErrorModel, LogItemType, ApiError, LinkedType
+from sysnet_pyutils.utils import is_valid_pid, local_now
+
+from api.commons import create_query, update_changed_values
+from api.dependencies import SortOrderEnum,  is_acl_authorized, header_scheme, is_api_authorized, get_request_identity, ANONYMOUS
+from api.models.odm import DbEquipment, DbDocument, DbContainer
+from api.routers.router_utils import create_container
+from init import CONFIG
+
+logging.basicConfig(
+    format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d:%H:%M:%S',
+    level=logging.DEBUG)
+
+LOGGER: Logger = logging.getLogger(__name__)
+
+ROUTER_TAGS = ['document']
+
+router = APIRouter(tags=ROUTER_TAGS)
+
+@router.get(
+    path='/document/trash',
+    response_model=DocumentListType,
+    summary='Vrací seznam smazaných objektů (Document)',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS,
+)
+async def get_document_trash(
+    api_key: APIKey = Depends(header_scheme),
+) -> DocumentListType:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    reply = await DbDocument.find(DbDocument.is_deleted == True).to_list()
+    if not reply:
+        raise ApiError(code=404, message='Trash is empty')
+    return DocumentListType(entries=reply, count=len(reply))
+
+@router.patch(
+    path='/document/{identifier}/restore',
+    response_model=bool,
+    summary='Obnoví smazaný objekt (Document)',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS,
+)
+async def restore_document(
+    identifier: str = Path(...),
+    api_key: APIKey = Depends(header_scheme),
+) -> bool:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    reply = await DbDocument.by_general_id(genid=identifier, include_deleted=True)
+    if not reply:
+        raise ApiError(code=404, message='Document not found')
+    await reply.restore()
+    return True
+
+@router.delete(
+    path='/document/trash/empty',
+    response_model=bool,
+    summary='Vysype koš — definitivně smaže všechny smazané objekty (Document)',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS,
+)
+async def empty_document_trash(
+    api_key: APIKey = Depends(header_scheme),
+) -> bool:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    deleted_items = await DbDocument.find(DbDocument.is_deleted == True).to_list()
+    for item in deleted_items:
+        await item.hard_delete()
+    return True
+
+
+LOGGER.info(f"{__name__} - API router is starting up")
+
+
+@router.delete(
+    path='/document/{identifier}',
+    response_model=bool,
+    summary='Odstraní jeden dokument IPPC',
+    description='Odstraní dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def delete_document(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu IPPC',
+                 description='Lze použít UUID (nativní), čj. nebo PID (převzato z Domina)')],
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[bool, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    actor = identity.sub if identity else ANONYMOUS
+    LOGGER.info(f"User [{actor}] " + f"DELETE /document/{str(identifier)}")
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if identifier in [None, '']:
+        raise ApiError(code=400, message='Missing identifier')
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is None:
+        LOGGER.info(f"DELETE /document/{str(identifier)} NOT FOUND")
+        raise ApiError(code=404, message=f"Document '{str(identifier)}' not found")
+    LOGGER.info(f"DELETE /document/{str(identifier)} FOUND")
+    if CONFIG.get('deletion_policy', {}).get('soft_delete_enabled'):
+        await reply.soft_delete(deleted_by=identity.sub if identity else ANONYMOUS)
+    else:
+        await reply.hard_delete()
+    return True
+
+
+@router.get(
+    path='/document/{identifier}',
+    response_model=DocumentType,
+    summary='Vrací jeden dokument IPPC',
+    description='Vrátí dokument podle identifikátoru',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def get_document(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu',
+                 description='Lze použít UUID (nativní), code. nebo PID (převzato z Domina)')],
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f"GET /document/{identifier}")
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if identifier in [None, '']:
+        raise ApiError(code=400, message='Missing identifier')
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is not None:
+        LOGGER.info(f"GET /document/{identifier}  FOUND: {str(reply.identifier)} ")
+        out = reply.document
+        return out
+    LOGGER.info(f"GET /document/{identifier} NOT FOUND")
+    if CONFIG['migration'] and is_valid_pid(identifier):
+        reply = await DbDocument.migrate(pid=identifier)
+        if reply is not None:
+            out = reply.document
+            return out
+    raise ApiError(code=404, message=f"Not found {identifier}")
+
+
+@router.get(
+    path='/document',
+    response_model=DocumentListType,
+    summary='Vrací seznam dokumentů IPPC',
+    description='Vrátí seznam dokumentů - vhodné pro našeptávač',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def get_document_list(
+        name: Annotated[
+            Union[str, None], Query(title='Vyhledávané jméno', description='Jméno k vyhledání')] = None,
+        activity: Annotated[
+            Union[str, None], Query(title='Vyhledávaná činnost', description='Činnost k vyhledání')] = None,
+        search: Annotated[
+            Union[str, None], Query(title='Vyhledávaný text', description='Text k vyhledání')] = None,
+        start: Annotated[
+            Union[int, None], Query(title='Počáteční dokument na stránce')] = None,
+        page_size: Annotated[
+            Union[int, None], Query(title='Velikost stránky')] = None,
+        page: Annotated[
+            Union[int, None], Query(title='Stránka')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentListType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info('GET /document')
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    query, paging, sort = create_query(key=name, activity=activity, search=search, start=start, pagesize=page_size, page=page)
+    reply = await DbDocument.by_query(query=query, paging=paging, sort=sort)
+    if reply is None or not bool(reply):
+        raise ApiError(code=404, message='Nothing found')
+    if reply.count == 0:
+        raise ApiError(code=404, message='Nothing found')
+    return reply
+
+
+@router.get(
+    path='/document/container/{container}',
+    response_model=DocumentListType,
+    summary='Vrací seznam dokumentů IPPC v kontejneru',
+    description='Vrátí seznam dokumentů v kontejneru',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def get_document_list_container(
+        container: Annotated[UUID, Path(title='Identifikátor kontejneru', description='UUID kontejneru (router 140)')],
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentListType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f'GET /document/container/{container}')
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    reply = await DbDocument.by_container(container=container)
+    if reply is None or not bool(reply):
+        raise ApiError(code=404, message='Nothing found')
+    if reply.count == 0:
+        raise ApiError(code=404, message='Nothing found')
+    return reply
+
+
+@router.post(
+    path='/document/container/{container}',
+    response_model=DocumentType,
+    summary='Vytvoří dokument v kontejneru',
+    description='Vrátí vytvořený dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def post_document_from_container(
+        container: Annotated[UUID, Path(title='Identifikátor kontejneru', description='UUID kontejneru (router 140)')],
+        body: Annotated[
+            DocumentTypeBase,
+            Body(
+                title='Data OZO IPPC',
+                description='Produkční data dokumentu IPPC')] = None,
+        doc_code: Annotated[Union[IppcDocCodeEnum, None], Query(description='Kód dokumentu (dříve formulář)')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> DocumentType:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f'POST /document/container/{container}')
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if container is None:
+        raise ApiError(code=400, message='Missing container ID')
+    if doc_code is None:
+        raise ApiError(code=400, message='Missing document code')
+    if body is None:
+        raise ApiError(code=400, message='Missing data')
+    body.doc_code = doc_code
+    cont = await DbContainer.by_uuid(uuid=container)
+    if cont is None:
+        raise ApiError(code=404, message=f'Container {container} not found')
+    try:
+        b1 = DocumentTypeBase.model_dump(body)
+        dbdoc = DbDocument(**b1)
+        if dbdoc.metadata is None:
+            from sysnet_pyutils.models.general import MetadataType
+            dbdoc.metadata = MetadataType()
+        await dbdoc.put_to_container(container=cont.identifier, save=False)
+        await DbDocument.insert_one(dbdoc)
+        out = dbdoc.document
+        LOGGER.info(f'POST /document/container/{container} done: {str(dbdoc.identifier)}')
+        return out
+    except Exception as e:
+        LOGGER.error(f'POST /document/container/{container} FAILED: {str(e)}')
+        raise ApiError(code=500, message=str(e))
+
+
+@router.post(
+    path='/document/equipment/{equipment}',
+    response_model=DocumentType,
+    summary='Vytvoří nový dokument typu řízení nebo dokumentace',
+    description='Vytvoří kontejner řízení a umístí do něj nový dokument nebo použije kontejner dokumentace. Vrátí vytvořený dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def post_document_from_equipment(
+        equipment: Annotated[UUID, Path(title='Identifikátor kontejneru', description='UUID kontejneru (router 140)')],
+        body: Annotated[
+            DocumentTypeBase,
+            Body(
+                title='Data OZO IPPC',
+                description='Produkční data dokumentu IPPC')] = None,
+        doc_code: Annotated[Union[IppcDocCodeEnum, None], Query(description='Kód dokumentu (dříve formulář)')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f'POST /document/equipment/{equipment}')
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f'POST /document/equipment/{equipment} AUTHORIZED')
+    if equipment is None:
+        raise ApiError(code=400, message='Missing equipment ID')
+    LOGGER.info(f'POST /document/equipment/{equipment} EQUIPMENT')
+    if doc_code is None:
+        raise ApiError(code=400, message='Missing document code')
+    if (doc_code not in DOC_CREATES_CONTAINER) and (doc_code not in DOC_DOCUMENTATION):
+        raise ApiError(code=400, message=f"Invalid document code {doc_code.value}")
+    LOGGER.info(f'POST /document/equipment/{equipment} DOC_CODE {doc_code.value}')
+    if body is None:
+        raise ApiError(code=400, message='Missing data')
+    LOGGER.info(f'POST /document/equipment/{equipment}  BODY: {type(body)}')
+    body.doc_code = doc_code
+    LOGGER.info(f'POST /document/equipment/{equipment}  DOC_CODE2: {doc_code.value}')
+    eq = await DbEquipment.by_uuid(uuid=equipment)
+    if eq is None:
+        raise ApiError(code=404, message=f'Equipment {str(equipment)} not found')
+    eq_status = eq.status
+    LOGGER.info(f'POST /document/equipment/{equipment}  Equipment FOUND: {eq_status.value if eq_status else None}')
+    if eq_status not in [EquipmentStatusEnum.EQ_ACTIVE, EquipmentStatusEnum.EQ_AUTHORIZED]:
+        raise ApiError(code=400, message=f'Illegal equipment status {str(eq_status)}')
+    try:
+        cont = await create_container(equipment=eq, doc_code=doc_code)
+        if cont is None:
+            raise ApiError(code=400, message=f"Invalid doc_code: {doc_code.value}")
+        LOGGER.info(f'POST /document/equipment/{equipment}  CONTAINER: {str(cont.identifier)}')
+        b1 = DocumentTypeBase.model_dump(body)
+        dbdoc = DbDocument(**b1)
+        if dbdoc.metadata is None:
+            from sysnet_pyutils.models.general import MetadataType
+            dbdoc.metadata = MetadataType()
+        await dbdoc.put_to_container(container=cont.identifier, save=False)
+        reply = await DbDocument.insert_one(dbdoc)
+        LOGGER.info(f'POST /document/equipment/{equipment}  STORED: {str(reply.identifier)}')
+        reply.operator = eq.operator
+        reply.equipment = LinkedType(
+            title=eq.title,
+            code='IPPC.INTERNAL',
+            id=str(eq.metadata.uuid),
+            unid=eq.metadata.unid,
+            pid=eq.metadata.pid,
+            uuid=eq.metadata.uuid)
+        reply.activity_main = eq.activity_main
+        reply.activity_other = eq.activity_other
+        reply1 = await reply.replace()
+        LOGGER.info(f'POST /document/equipment/{equipment}  UPDATED: {str(reply1.identifier)}')
+        out = reply1.document
+        LOGGER.info(f'POST /document/equipment/{equipment} done: {str(dbdoc.identifier)}')
+        return out
+    except Exception as e:
+        LOGGER.error(f'POST /document/equipment/{equipment} FAILED: {str(e)}')
+        raise ApiError(code=500, message=str(e))
+
+
+@router.post(
+    path='/document',
+    response_model=DocumentType,
+    summary='Vytvoří jeden dokument IPPC',
+    description='Vrátí vytvořený dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def post_document(
+        body: Annotated[
+            DocumentTypeBase,
+            Body(
+                title='Data OZO IPPC',
+                description='Produkční data dokumemtu IPPC')] = None,
+        doc_code: Annotated[Union[IppcDocCodeEnum, None], Query(description='Kód dokumentu (dříve formulář)')] = None,
+        container: Annotated[Union[UUID, None], Query(description='UUID kontejneru pro zařazení')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info('POST /document')
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if doc_code is None:
+        raise ApiError(code=400, message='Missing document code')
+    if body is None:
+        raise ApiError(code=400, message='Missing data')
+    body.doc_code = doc_code
+    if container in [None, '']:
+        raise ApiError(code=400, message='Missing container UUID')
+    c = await DbContainer.by_uuid(uuid=container)
+    if c is None:
+        raise ApiError(code=404, message=f"Container {str(container)} not found.")
+    try:
+        b1 = DocumentTypeBase.model_dump(body)
+        dbdoc = DbDocument(**b1)
+        if c is not None:
+            if dbdoc.metadata is None:
+                from sysnet_pyutils.models.general import MetadataType
+                dbdoc.metadata = MetadataType()
+            await dbdoc.put_to_container(container=c.identifier, save=False)
+        await DbDocument.insert_one(dbdoc)
+        out = dbdoc.document
+        LOGGER.info(f'POST /document done: {str(dbdoc.identifier)}')
+        return out
+    except Exception as e:
+        LOGGER.error(f'POST /document FAILED: {str(e)}')
+        raise ApiError(code=500, message=str(e))
+
+
+@router.put(
+    path='/document/{identifier}',
+    response_model=DocumentType,
+    summary='Aktualizuje jeden dokument IPPC',
+    description='Vrátí aktualizovaný dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def put_document(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu',
+                 description='Lze použít UUID (nativní), čj. nebo PID (převzato z Domina)')],
+        body: Annotated[
+            DocumentTypeBase,
+            Body(
+                title='Data dokumentu OZO',
+                description='Produkční data dokumentu IPPC')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+, identity: Optional[AuthenticatedUser] = Depends(get_request_identity)) -> Union[DocumentType, ErrorModel]:
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f"PUT /document/{str(identifier)}")
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if identifier in [None, '']:
+        raise ApiError(code=400, message='Missing identifier')
+    if body is None:
+        raise ApiError(code=400, message='Missing data')
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is None:
+        raise ApiError(code=404, message=f"Document '{identifier}' not found")
+    uuid = reply.identifier
+    LOGGER.info(f"PUT /document/{str(identifier)} FOUND: {str(uuid)}")
+    b = reply.model_dump()
+    body_old = DocumentTypeBase(**b)
+    dict_old = body_old.model_dump()
+    dict_new = body.model_dump()
+    # doc_code je povinné — pokud klient neposlal, zachováme stávající hodnotu z DB
+    if dict_new.get('doc_code') is None:
+        dict_new['doc_code'] = dict_old.get('doc_code')
+    update_changed_values(reply, dict_old, dict_new)
+    reply1 = await reply.replace()
+    if reply1 is None:
+        raise ApiError(code=500, message=f"Document '{identifier}' cannot be updated")
+    LOGGER.info(f"PUT /document/{str(identifier)}: {type(reply1)} ")
+    out = reply1.document
+    LOGGER.info(f"PUT /document/{str(identifier)} DONE: {type(out)} ")
+    return out
+
+
+@router.patch(
+    path='/document/{identifier}/add_log',
+    response_model=DocumentType,
+    summary='Přidá log do dokumentu IPPC',
+    description='Vrátí aktualizovaný dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def patch_document_add_log(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu',
+                 description='Lze použít UUID (nativní), čj. nebo PID (převzato z Domina)')],
+        body: Annotated[
+            LogItemType,
+            Body(
+                title='Jeden řádek logu',
+                description='Řádek logu k zařízení IPPC')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+):
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f"PATCH /document/{str(identifier)}/add_log")
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if identifier in [None, '']:
+        raise ApiError(code=400, message='Missing identifier')
+    if body is None:
+        raise ApiError(code=400, message='Missing data')
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is None:
+        raise ApiError(code=404, message=f"Document '{identifier}' not found")
+    uuid = reply.identifier
+    LOGGER.info(f"PATCH /document/{str(identifier)}/add_log FOUND: {str(uuid)}")
+    if body.timestamp is None:
+        body.timestamp = local_now()
+    if body.originator in [None, '']:
+        body.originator = 'Anonymous'
+    reply1 = await reply.append_log(log=body)
+    out = reply1.document
+    return out
+
+
+@router.patch(
+    path='/document/{identifier}/container',
+    response_model=DocumentType,
+    summary='Zařadí dokument IPPC do kontejneru',
+    description='Vrátí aktualizovaný dokument',
+    responses={'default': {'model': ErrorModel}},
+    tags=ROUTER_TAGS
+)
+async def patch_document_to_container(
+        identifier: Annotated[
+            str,
+            Path(title='Identifikátor dokumentu',
+                 description='Lze použít UUID (nativní), čj. nebo PID (převzato z Domina)')],
+        container: Annotated[
+            Union[UUID, None],
+            Query(
+                title='Identifikátor kontejneru',
+                description='Pokud chybí, bude dokument vyřazen z aktuálního kontejneru')] = None,
+        authorize: Annotated[
+            Union[str, None],
+            Header(title='Autorizační token (JWT)', description='Zatím neimplementováno')] = None,
+        api_key: APIKey = Depends(header_scheme)
+):
+    if not is_api_authorized(key=api_key):
+        raise ApiError(code=403, message='Forbidden')
+    LOGGER.info(f"PATCH /document/{str(identifier)}/container")
+    if not await is_acl_authorized(authorize):
+        raise ApiError(code=403, message='Forbidden')
+    if identifier in [None, '']:
+        raise ApiError(code=400, message='Missing identifier')
+    reply = await DbDocument.by_general_id(genid=identifier)
+    if reply is None:
+        raise ApiError(code=404, message=f"Document '{identifier}' not found")
+    uuid = reply.identifier
+    LOGGER.info(f"PATCH /document/{str(identifier)}/container FOUND: {str(uuid)}")
+    reply1 = await reply.put_to_container(container=container)
+    out = reply1.document
+    return out
+
+
+
