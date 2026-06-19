@@ -16,6 +16,8 @@ jinja2
 pydantic>=2.0
 PyJWT[crypto]
 debugpy
+boto3
+botocore
 
 # Web tools
 firecrawl-py
